@@ -59,7 +59,7 @@ proc isValidSize*(s: string): bool =
   let n = parseInt(s)
   return n >= 1 and n <= 72
 
-proc flattenToText(n: Node, sb: var string) =
+proc flattenToText*(n: Node, sb: var string) =
   ## Re-serialize a subtree to its BBCode-ish source, used for `[code]`
   ## bodies and for extracting the implicit href of `[url]raw[/url]`.
   case n.kind

@@ -104,3 +104,35 @@ suite "bbcodeToHtml: end-to-end":
   test "single-quoted attribute value works end-to-end":
     check bbcodeToHtml("[url='https://x.test']y[/url]") ==
       "<a href=\"https://x.test\">y</a>"
+
+suite "bbcodeToMarkdown: end-to-end":
+  test "empty string":
+    check bbcodeToMarkdown("") == ""
+
+  test "kitchen sink":
+    let bb = "Hello [b]world[/b]! See [url=https://example.com]this[/url]."
+    check bbcodeToMarkdown(bb) ==
+      "Hello **world**! See [this](https://example.com)."
+
+  test "realistic forum post round-trips key elements":
+    let bb =
+      "Hey [b]everyone[/b], check out " &
+      "[url=https://example.com/page?q=1]this link[/url]!\n" &
+      "[quote=Bob]I think [i]bbcode[/i] is neat.[/quote]\n" &
+      "Pros:\n" &
+      "[list][*]simple[*]safe[*]portable[/list]"
+    let md = bbcodeToMarkdown(bb)
+    check "**everyone**" in md
+    check "[this link](https://example.com/page?q=1)" in md
+    check "> **Bob:**" in md
+    check "*bbcode*" in md
+    check "- simple\n- safe\n- portable" in md
+
+  test "malformed input degrades gracefully":
+    let bb = "a [b] b [/i] c [foo]d[/foo] e"
+    let md = bbcodeToMarkdown(bb)
+    check md.len > 0
+    check "<script" notin md
+
+  test "case-insensitive tag names":
+    check bbcodeToMarkdown("[B][I]hi[/I][/B]") == "***hi***"
