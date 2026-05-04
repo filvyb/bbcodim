@@ -62,6 +62,40 @@ proc isValidSize*(s: string): bool =
   let n = parseInt(s)
   return n >= 1 and n <= 72
 
+proc isValidEmail*(s: string): bool =
+  ## Permissive but injection-safe: only an LDH-style local/domain charset
+  ## (letters, digits, dot, underscore, hyphen, plus) plus exactly one `@`,
+  ## and the domain must contain a dot. Anything fancier should use the `mailto:` form of `[url]`.
+  if s.len == 0 or s.len > 254: return false
+  var atCount = 0
+  var atPos = -1
+  for i, c in s:
+    case c
+    of '@':
+      inc atCount
+      atPos = i
+    of 'a'..'z', 'A'..'Z', '0'..'9', '.', '_', '-', '+':
+      discard
+    else:
+      return false
+  if atCount != 1: return false
+  if atPos == 0 or atPos == s.len - 1: return false
+  return '.' in s[atPos + 1 ..< s.len]
+
+proc parseImgSize*(s: string, width, height: var string): bool =
+  ## `[img=WxH]` - both dimensions must be 1..4 digit positive integers.
+  let parts = s.split('x')
+  if parts.len != 2: return false
+  if parts[0].len == 0 or parts[1].len == 0: return false
+  if parts[0].len > 4 or parts[1].len > 4: return false
+  for c in parts[0]:
+    if c notin Digits: return false
+  for c in parts[1]:
+    if c notin Digits: return false
+  width = parts[0]
+  height = parts[1]
+  return true
+
 proc flattenToText*(n: Node, sb: var string) =
   ## Re-serialize a subtree to its BBCode-ish source, used for `[code]`
   ## bodies and for extracting the implicit href of `[url]raw[/url]`.
@@ -89,7 +123,7 @@ proc renderChildren(children: seq[Node], sb: var string) =
 
 proc renderUnknown(n: Node, sb: var string) =
   ## Render the tag literally. Children are still rendered through the normal
-  ## path — only the wrapper is degraded.
+  ## path.
   sb.add('[')
   htmlEscape(n.name, sb)
   if n.hasValue:
@@ -152,8 +186,10 @@ proc renderNode(n: Node, sb: var string) =
       sb.add("<sub>"); renderChildren(n.children, sb); sb.add("</sub>")
     of "sup":
       sb.add("<sup>"); renderChildren(n.children, sb); sb.add("</sup>")
-    of "hr":
+    of "hr", "line":
       sb.add("<hr>")
+    of "br":
+      sb.add("<br>")
     of "center":
       sb.add("<div style=\"text-align:center\">")
       renderChildren(n.children, sb)
@@ -213,7 +249,31 @@ proc renderNode(n: Node, sb: var string) =
       if isSafeUrl(src):
         sb.add("<img src=\"")
         htmlEscape(src, sb)
-        sb.add("\" alt=\"\">")
+        sb.add('"')
+        if n.hasValue:
+          var w, h: string
+          if parseImgSize(n.value, w, h):
+            sb.add(" width=\""); sb.add(w); sb.add('"')
+            sb.add(" height=\""); sb.add(h); sb.add('"')
+        sb.add(" alt=\"\">")
+      else:
+        renderUnknown(n, sb)
+    of "email":
+      var address = ""
+      if n.hasValue:
+        address = n.value
+      else:
+        for c in n.children:
+          flattenToText(c, address)
+      if isValidEmail(address):
+        sb.add("<a href=\"mailto:")
+        htmlEscape(address, sb)
+        sb.add("\">")
+        if n.hasValue:
+          renderChildren(n.children, sb)
+        else:
+          htmlEscape(address, sb)
+        sb.add("</a>")
       else:
         renderUnknown(n, sb)
     of "color":
@@ -249,6 +309,37 @@ proc renderNode(n: Node, sb: var string) =
         flattenToText(c, raw)
       htmlEscape(raw, sb)
       sb.add("</code></pre>")
+    of "nfo":
+      ## Same literal-body treatment as [code]: the whole point is to keep
+      ## monospace ASCII art untouched, including any `[...]`-shaped runs.
+      sb.add("<pre class=\"nfo\">")
+      var raw = ""
+      for c in n.children:
+        flattenToText(c, raw)
+      htmlEscape(raw, sb)
+      sb.add("</pre>")
+    of "blur":
+      if n.hasValue:
+        if isValidColor(n.value):
+          sb.add("<span style=\"color:")
+          sb.add(n.value)
+          sb.add(";filter:blur(2px)\">")
+          renderChildren(n.children, sb)
+          sb.add("</span>")
+        else:
+          renderUnknown(n, sb)
+      else:
+        sb.add("<span style=\"filter:blur(2px)\">")
+        renderChildren(n.children, sb)
+        sb.add("</span>")
+    of "table":
+      sb.add("<table>"); renderChildren(n.children, sb); sb.add("</table>")
+    of "row", "tr":
+      sb.add("<tr>"); renderChildren(n.children, sb); sb.add("</tr>")
+    of "cell", "td":
+      sb.add("<td>"); renderChildren(n.children, sb); sb.add("</td>")
+    of "th":
+      sb.add("<th>"); renderChildren(n.children, sb); sb.add("</th>")
     of "list":
       let ordered = n.hasValue and n.value == "1"
       renderList(n, ordered, sb)

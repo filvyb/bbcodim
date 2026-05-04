@@ -10,7 +10,7 @@
 
 import std/strutils
 import parser
-import renderer  # isSafeUrl, flattenToText
+from renderer import isSafeUrl, flattenToText, isValidEmail
 
 proc mdEscape*(s: string, sb: var string) =
   ## Escape the CommonMark inline metacharacters that would otherwise be
@@ -176,11 +176,14 @@ proc renderMdNode(n: Node, sb: var string) =
     of "s", "strike":
       sb.add("~~"); renderMdChildren(n.children, sb); sb.add("~~")
     of "u", "color", "size", "sub", "sup",
-       "center", "left", "right", "align", "spoiler":
-      # No portable Markdown equivalent — drop the wrapper, keep content.
+       "center", "left", "right", "align", "spoiler", "blur",
+       "table", "row", "tr", "cell", "td", "th":
+      # No portable CommonMark equivalent
       renderMdChildren(n.children, sb)
-    of "hr":
+    of "hr", "line":
       renderMdBlock("---", sb)
+    of "br":
+      sb.add("\\\n")
     of "url":
       if n.hasValue:
         if isSafeUrl(n.value):
@@ -202,6 +205,8 @@ proc renderMdNode(n: Node, sb: var string) =
         else:
           renderMdLiteral(n, sb)
     of "img":
+      ## CommonMark image syntax has no place for width/height, so
+      ## `[img=WxH]URL[/img]` renders identically to `[img]URL[/img]`.
       var src = ""
       for c in n.children:
         flattenToText(c, src)
@@ -211,9 +216,29 @@ proc renderMdNode(n: Node, sb: var string) =
         sb.add(')')
       else:
         renderMdLiteral(n, sb)
+    of "email":
+      var address = ""
+      if n.hasValue:
+        address = n.value
+      else:
+        for c in n.children:
+          flattenToText(c, address)
+      if isValidEmail(address):
+        if n.hasValue:
+          sb.add('[')
+          renderMdChildren(n.children, sb)
+          sb.add("](mailto:")
+          sb.add(address)
+          sb.add(')')
+        else:
+          sb.add('<')
+          sb.add(address)
+          sb.add('>')
+      else:
+        renderMdLiteral(n, sb)
     of "quote":
       renderMdQuote(n, sb)
-    of "code":
+    of "code", "nfo":
       renderMdCode(n, sb)
     of "list":
       renderMdList(n, n.hasValue and n.value == "1", sb)

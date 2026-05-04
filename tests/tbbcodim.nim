@@ -34,7 +34,6 @@ suite "bbcodeToHtml: end-to-end":
       "<pre><code>if x &lt; 1 then [b]bold[/b]</code></pre>"
 
   test "malformed input degrades gracefully":
-    # Unclosed [b], stray [/i], unknown tag — none of this should raise.
     let bb = "a [b] b [/i] c [foo]d[/foo] e"
     let h = bbcodeToHtml(bb)
     check h.len > 0
@@ -157,6 +156,67 @@ suite "bbcodeToHtml: end-to-end":
     check bbcodeToHtml("[em]a[/em]") == "<em>a</em>"
     check bbcodeToHtml("[strike]a[/strike]") == "<s>a</s>"
 
+  test "email tag without attribute":
+    check bbcodeToHtml("[email]a@b.test[/email]") ==
+      "<a href=\"mailto:a@b.test\">a@b.test</a>"
+
+  test "email tag with attribute":
+    check bbcodeToHtml("[email=a@b.test]contact[/email]") ==
+      "<a href=\"mailto:a@b.test\">contact</a>"
+
+  test "email tag with invalid address falls back to literal":
+    let h = bbcodeToHtml("[email]not an email[/email]")
+    check "<a" notin h
+
+  test "email tag with HTML-injection address falls back":
+    let h = bbcodeToHtml("[email=a@b.test\" onclick=\"x]y[/email]")
+    check "<a" notin h
+    # The literal echo back must not let an unescaped `"` close the
+    # surrounding attribute and let `onclick=` become an active handler.
+    check "\" onclick=" notin h
+
+  test "img with size attribute":
+    check bbcodeToHtml("[img=150x100]https://example.com/x.png[/img]") ==
+      "<img src=\"https://example.com/x.png\" width=\"150\" height=\"100\" alt=\"\">"
+
+  test "img with invalid size falls back to plain img":
+    check bbcodeToHtml("[img=evil\" onerror=\"x]https://example.com/x.png[/img]") ==
+      "<img src=\"https://example.com/x.png\" alt=\"\">"
+
+  test "line tag is an alias for hr":
+    check bbcodeToHtml("a[line]b") == "a<hr>b"
+
+  test "br tag":
+    check bbcodeToHtml("a[br]b") == "a<br>b"
+
+  test "stray [/br] is dropped":
+    check bbcodeToHtml("a[/br]b") == "ab"
+
+  test "nfo tag keeps body literal":
+    check bbcodeToHtml("[nfo][b]<art>[/b][/nfo]") ==
+      "<pre class=\"nfo\">[b]&lt;art&gt;[/b]</pre>"
+
+  test "blur tag without color":
+    check bbcodeToHtml("[blur]secret[/blur]") ==
+      "<span style=\"filter:blur(2px)\">secret</span>"
+
+  test "blur tag with valid color":
+    check bbcodeToHtml("[blur=red]secret[/blur]") ==
+      "<span style=\"color:red;filter:blur(2px)\">secret</span>"
+
+  test "blur tag with bogus color falls back to literal":
+    let h = bbcodeToHtml("[blur=red\" onclick=\"x]secret[/blur]")
+    check "<span" notin h
+
+  test "table with row and cell":
+    check bbcodeToHtml("[table][row][cell]a[/cell][cell]b[/cell][/row][/table]") ==
+      "<table><tr><td>a</td><td>b</td></tr></table>"
+
+  test "table with tr/td/th aliases":
+    check bbcodeToHtml(
+      "[table][tr][th]H[/th][/tr][tr][td]v[/td][/tr][/table]") ==
+      "<table><tr><th>H</th></tr><tr><td>v</td></tr></table>"
+
 suite "bbcodeToMarkdown: end-to-end":
   test "empty string":
     check bbcodeToMarkdown("") == ""
@@ -188,3 +248,24 @@ suite "bbcodeToMarkdown: end-to-end":
 
   test "case-insensitive tag names":
     check bbcodeToMarkdown("[B][I]hi[/I][/B]") == "***hi***"
+
+  test "email tag":
+    check bbcodeToMarkdown("[email]a@b.test[/email]") == "<a@b.test>"
+    check bbcodeToMarkdown("[email=a@b.test]write[/email]") ==
+      "[write](mailto:a@b.test)"
+
+  test "line tag is an alias for hr":
+    check bbcodeToMarkdown("a[line]b") == "a\n\n---\n\nb"
+
+  test "br tag becomes a hard line break":
+    check bbcodeToMarkdown("a[br]b") == "a\\\nb"
+
+  test "nfo tag becomes a fenced code block":
+    check bbcodeToMarkdown("[nfo]ascii [b]art[/b][/nfo]") ==
+      "```\nascii [b]art[/b]\n```"
+
+  test "table tags drop wrappers (no portable CommonMark equivalent)":
+    check bbcodeToMarkdown("[table][row][cell]a[/cell][/row][/table]") == "a"
+
+  test "blur tag drops wrapper":
+    check bbcodeToMarkdown("[blur=red]hi[/blur]") == "hi"

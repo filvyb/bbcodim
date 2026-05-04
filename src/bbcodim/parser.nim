@@ -28,10 +28,11 @@ type
     hasValue: bool
     children: seq[Node]
 
-const voidTags* = ["hr"]
+const voidTags* = ["hr", "line", "br"]
   ## Tags that are emitted as standalone elements at the open token: they
-  ## have no body and never wait for a matching close. A stray `[/hr]` is
-  ## treated as a redundant marker (no content to lose) and dropped.
+  ## have no body and never wait for a matching close. A stray close tag
+  ## (e.g. `[/hr]`) is treated as a redundant marker (no content to lose)
+  ## and dropped.
 
 func reconstructOpen(name, value: string, hasValue: bool): string =
   result = "[" & name

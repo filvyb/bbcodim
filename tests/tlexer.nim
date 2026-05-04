@@ -82,8 +82,6 @@ suite "lexer":
     check toks[2].kind == tkCloseTag and toks[2].closeName == "h1"
 
   test "incidental bracket like arr[0] tokenizes as text + open":
-    # `[0]` looks like a tag and the lexer trusts it. Recovery is the
-    # parser's job — at EOF the unmatched [0] is rebuilt as literal text.
     let toks = tokenize("arr[0]")
     check toks.len == 2
     check toks[0].kind == tkText and toks[0].text == "arr"
