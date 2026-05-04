@@ -1,8 +1,8 @@
 # Package
 
-version       = "0.1.0"
+version       = "1.0.0"
 author        = "Filip Vybihal"
-description   = " BBCode parser and renderer written in Nim "
+description   = "BBCode parser and renderer written in Nim"
 license       = "MIT"
 srcDir        = "src"
 
