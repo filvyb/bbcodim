@@ -4,7 +4,7 @@ A small BBCode parser and HTML renderer written in Nim.
 
 - Pure Nim, no runtime dependencies
 - Always returns escaped, well-formed HTML, never raises on malformed input
-- Built-in sanitization for URLs, colors, and sizes (no `javascript:` href, no CSS injection)
+- Ssanitization for URLs, colors, and sizes
 - Unknown or mismatched tags assumed to be literal text rather than dropping content
 
 ## Install
@@ -92,4 +92,4 @@ opening an injection vector.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).
