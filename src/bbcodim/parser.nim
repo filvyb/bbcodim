@@ -28,6 +28,11 @@ type
     hasValue: bool
     children: seq[Node]
 
+const voidTags* = ["hr"]
+  ## Tags that are emitted as standalone elements at the open token: they
+  ## have no body and never wait for a matching close. A stray `[/hr]` is
+  ## treated as a redundant marker (no content to lose) and dropped.
+
 func reconstructOpen(name, value: string, hasValue: bool): string =
   result = "[" & name
   if hasValue:
@@ -57,8 +62,15 @@ proc parse*(tokens: seq[Token]): seq[Node] =
     of tkText:
       top.children.add(Node(kind: nkText, text: tok.text))
     of tkOpenTag:
-      stack.add(Frame(name: tok.name, value: tok.value, hasValue: tok.hasValue))
+      if tok.name in voidTags:
+        top.children.add(Node(kind: nkElement,
+          name: tok.name, value: tok.value, hasValue: tok.hasValue,
+          children: @[]))
+      else:
+        stack.add(Frame(name: tok.name, value: tok.value, hasValue: tok.hasValue))
     of tkCloseTag:
+      if tok.closeName in voidTags:
+        continue
       var matchIdx = -1
       var i = stack.high
       while i > 0:

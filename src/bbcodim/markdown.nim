@@ -138,6 +138,14 @@ proc renderMdList(elem: Node, ordered: bool, sb: var string) =
 
   renderMdBlock(content, sb)
 
+proc renderMdHeading(elem: Node, level: int, sb: var string) =
+  var inner = ""
+  renderMdChildren(elem.children, inner)
+  var content = "#".repeat(level)
+  content.add(' ')
+  content.add(inner)
+  renderMdBlock(content, sb)
+
 proc renderMdCode(elem: Node, sb: var string) =
   var raw = ""
   for c in elem.children:
@@ -161,15 +169,18 @@ proc renderMdNode(n: Node, sb: var string) =
     mdEscape(n.text, sb)
   of nkElement:
     case n.name
-    of "b":
+    of "b", "strong":
       sb.add("**"); renderMdChildren(n.children, sb); sb.add("**")
-    of "i":
+    of "i", "em":
       sb.add('*'); renderMdChildren(n.children, sb); sb.add('*')
-    of "s":
+    of "s", "strike":
       sb.add("~~"); renderMdChildren(n.children, sb); sb.add("~~")
-    of "u", "color", "size":
+    of "u", "color", "size", "sub", "sup",
+       "center", "left", "right", "align", "spoiler":
       # No portable Markdown equivalent — drop the wrapper, keep content.
       renderMdChildren(n.children, sb)
+    of "hr":
+      renderMdBlock("---", sb)
     of "url":
       if n.hasValue:
         if isSafeUrl(n.value):
@@ -206,6 +217,12 @@ proc renderMdNode(n: Node, sb: var string) =
       renderMdCode(n, sb)
     of "list":
       renderMdList(n, n.hasValue and n.value == "1", sb)
+    of "h1": renderMdHeading(n, 1, sb)
+    of "h2": renderMdHeading(n, 2, sb)
+    of "h3": renderMdHeading(n, 3, sb)
+    of "h4": renderMdHeading(n, 4, sb)
+    of "h5": renderMdHeading(n, 5, sb)
+    of "h6": renderMdHeading(n, 6, sb)
     else:
       renderMdLiteral(n, sb)
 

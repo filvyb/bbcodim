@@ -132,6 +132,50 @@ suite "markdown: lists":
     let md = m("[list=1][*]a[list][*]b[/list][/list]")
     check md == "1. a\n\n   - b"
 
+suite "markdown: headings":
+  test "h1 through h6":
+    check m("[h1]a[/h1]") == "# a"
+    check m("[h2]a[/h2]") == "## a"
+    check m("[h3]a[/h3]") == "### a"
+    check m("[h4]a[/h4]") == "#### a"
+    check m("[h5]a[/h5]") == "##### a"
+    check m("[h6]a[/h6]") == "###### a"
+
+  test "heading content is markdown-escaped and supports inline tags":
+    check m("[h1][b]hi[/b] *raw*[/h1]") == "# **hi** \\*raw\\*"
+
+  test "heading is a block: blank line separates from neighbours":
+    check m("intro[h1]title[/h1]after") == "intro\n\n# title\n\nafter"
+
+  test "two adjacent headings get a blank line between":
+    check m("[h1]a[/h1][h2]b[/h2]") == "# a\n\n## b"
+
+suite "markdown: hr / alignment / sub / sup / spoiler / aliases":
+  test "hr as void tag becomes thematic break":
+    check m("a[hr]b") == "a\n\n---\n\nb"
+
+  test "hr without surrounding content":
+    check m("[hr]") == "---"
+
+  test "alignment tags drop wrapper":
+    check m("[center]hi[/center]") == "hi"
+    check m("[left]hi[/left]") == "hi"
+    check m("[right]hi[/right]") == "hi"
+    check m("[align=center]hi[/align]") == "hi"
+
+  test "sub and sup drop wrapper":
+    check m("H[sub]2[/sub]O") == "H2O"
+    check m("E=mc[sup]2[/sup]") == "E=mc2"
+
+  test "spoiler drops wrapper (and label)":
+    check m("[spoiler]boo[/spoiler]") == "boo"
+    check m("[spoiler=Ending]Bob dies[/spoiler]") == "Bob dies"
+
+  test "aliases: strong/em/strike":
+    check m("[strong]a[/strong]") == "**a**"
+    check m("[em]a[/em]") == "*a*"
+    check m("[strike]a[/strike]") == "~~a~~"
+
 suite "markdown: unknown / mismatched":
   test "unknown tag rendered literally with markdown escapes":
     check m("[foo]bar[/foo]") == "\\[foo\\]bar\\[/foo\\]"

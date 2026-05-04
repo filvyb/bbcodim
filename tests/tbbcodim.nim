@@ -105,6 +105,58 @@ suite "bbcodeToHtml: end-to-end":
     check bbcodeToHtml("[url='https://x.test']y[/url]") ==
       "<a href=\"https://x.test\">y</a>"
 
+  test "headings h1 through h6":
+    check bbcodeToHtml("[h1]a[/h1]") == "<h1>a</h1>"
+    check bbcodeToHtml("[h2]a[/h2]") == "<h2>a</h2>"
+    check bbcodeToHtml("[h3]a[/h3]") == "<h3>a</h3>"
+    check bbcodeToHtml("[h4]a[/h4]") == "<h4>a</h4>"
+    check bbcodeToHtml("[h5]a[/h5]") == "<h5>a</h5>"
+    check bbcodeToHtml("[h6]a[/h6]") == "<h6>a</h6>"
+
+  test "heading content is escaped and may contain inline tags":
+    check bbcodeToHtml("[h1]a < [b]b[/b][/h1]") ==
+      "<h1>a &lt; <strong>b</strong></h1>"
+
+  test "hr as void tag (no closing required)":
+    check bbcodeToHtml("a[hr]b") == "a<hr>b"
+
+  test "stray [/hr] is dropped silently":
+    check bbcodeToHtml("a[/hr]b") == "ab"
+
+  test "alignment tags":
+    check bbcodeToHtml("[center]a[/center]") ==
+      "<div style=\"text-align:center\">a</div>"
+    check bbcodeToHtml("[left]a[/left]") ==
+      "<div style=\"text-align:left\">a</div>"
+    check bbcodeToHtml("[right]a[/right]") ==
+      "<div style=\"text-align:right\">a</div>"
+    check bbcodeToHtml("[align=justify]a[/align]") ==
+      "<div style=\"text-align:justify\">a</div>"
+
+  test "align with bogus value falls back to literal":
+    check bbcodeToHtml("[align=evil\" onload=\"x]a[/align]") ==
+      "[align=evil&quot; onload=&quot;x]a[/align]"
+
+  test "sub and sup":
+    check bbcodeToHtml("H[sub]2[/sub]O") == "H<sub>2</sub>O"
+    check bbcodeToHtml("E=mc[sup]2[/sup]") == "E=mc<sup>2</sup>"
+
+  test "spoiler with and without label":
+    check bbcodeToHtml("[spoiler]boo[/spoiler]") ==
+      "<details><summary>Spoiler</summary>boo</details>"
+    check bbcodeToHtml("[spoiler=Ending]Bob dies[/spoiler]") ==
+      "<details><summary>Ending</summary>Bob dies</details>"
+
+  test "spoiler label is HTML-escaped":
+    let h = bbcodeToHtml("[spoiler=<script>]x[/spoiler]")
+    check "<script>" notin h
+    check "&lt;script&gt;" in h
+
+  test "aliases: strong/em/strike":
+    check bbcodeToHtml("[strong]a[/strong]") == "<strong>a</strong>"
+    check bbcodeToHtml("[em]a[/em]") == "<em>a</em>"
+    check bbcodeToHtml("[strike]a[/strike]") == "<s>a</s>"
+
 suite "bbcodeToMarkdown: end-to-end":
   test "empty string":
     check bbcodeToMarkdown("") == ""

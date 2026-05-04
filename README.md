@@ -65,10 +65,12 @@ let md     = renderMarkdown(ast)       # string (Markdown)
 
 | BBCode | HTML | Markdown |
 | --- | --- | --- |
-| `[b]...[/b]` | `<strong>...</strong>` | `**...**` |
-| `[i]...[/i]` | `<em>...</em>` | `*...*` |
+| `[b]...[/b]`, `[strong]...[/strong]` | `<strong>...</strong>` | `**...**` |
+| `[i]...[/i]`, `[em]...[/em]` | `<em>...</em>` | `*...*` |
 | `[u]...[/u]` | `<u>...</u>` | (wrapper dropped) |
-| `[s]...[/s]` | `<s>...</s>` | `~~...~~` |
+| `[s]...[/s]`, `[strike]...[/strike]` | `<s>...</s>` | `~~...~~` |
+| `[sub]...[/sub]` | `<sub>...</sub>` | (wrapper dropped) |
+| `[sup]...[/sup]` | `<sup>...</sup>` | (wrapper dropped) |
 | `[url]https://...[/url]` | `<a href="...">...</a>` | `<https://...>` |
 | `[url=https://...]text[/url]` | `<a href="...">text</a>` | `[text](https://...)` |
 | `[img]https://.../x.png[/img]` | `<img src="..." alt="">` | `![](https://.../x.png)` |
@@ -81,11 +83,18 @@ let md     = renderMarkdown(ast)       # string (Markdown)
 | `[list]...[/list]` | `<ul>...</ul>` | `- item` lines |
 | `[list=1]...[/list]` | `<ol>...</ol>` | `1. item` lines |
 | `[*]item` | `<li>item</li>` (inside a `[list]`) | list-item marker |
+| `[h1]...[/h1]` … `[h6]...[/h6]` | `<h1>...</h1>` … `<h6>...</h6>` | `# ...` … `###### ...` |
+| `[hr]` | `<hr>` | `---` block |
+| `[center]...[/center]` (also `[left]`, `[right]`) | `<div style="text-align:center">...</div>` | (wrapper dropped) |
+| `[align=left\|center\|right\|justify]...[/align]` | `<div style="text-align:...">...</div>` | (wrapper dropped) |
+| `[spoiler]...[/spoiler]` | `<details><summary>Spoiler</summary>...</details>` | (wrapper dropped) |
+| `[spoiler=Title]...[/spoiler]` | `<details><summary>Title</summary>...</details>` | (wrapper dropped, label discarded) |
 
 Tag names are case-insensitive (`[B]` and `[b]` are the same).
 
 The Markdown renderer drops the wrapper of tags that have no portable
-CommonMark equivalent (`[u]`, `[color]`, `[size]`) and keeps their text.
+CommonMark equivalent (`[u]`, `[color]`, `[size]`, `[sub]`, `[sup]`,
+alignment, and `[spoiler]`) and keeps their text.
 
 ## Safety
 

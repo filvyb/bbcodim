@@ -52,6 +52,9 @@ proc isValidColor*(s: string): bool =
     if not c.isAlphaAscii(): return false
   return true
 
+proc isValidAlign*(s: string): bool =
+  s.toLowerAscii() in ["left", "center", "right", "justify"]
+
 proc isValidSize*(s: string): bool =
   if s.len == 0 or s.len > 3: return false
   for c in s:
@@ -137,14 +140,50 @@ proc renderNode(n: Node, sb: var string) =
     htmlEscape(n.text, sb)
   of nkElement:
     case n.name
-    of "b":
+    of "b", "strong":
       sb.add("<strong>"); renderChildren(n.children, sb); sb.add("</strong>")
-    of "i":
+    of "i", "em":
       sb.add("<em>"); renderChildren(n.children, sb); sb.add("</em>")
     of "u":
       sb.add("<u>"); renderChildren(n.children, sb); sb.add("</u>")
-    of "s":
+    of "s", "strike":
       sb.add("<s>"); renderChildren(n.children, sb); sb.add("</s>")
+    of "sub":
+      sb.add("<sub>"); renderChildren(n.children, sb); sb.add("</sub>")
+    of "sup":
+      sb.add("<sup>"); renderChildren(n.children, sb); sb.add("</sup>")
+    of "hr":
+      sb.add("<hr>")
+    of "center":
+      sb.add("<div style=\"text-align:center\">")
+      renderChildren(n.children, sb)
+      sb.add("</div>")
+    of "left":
+      sb.add("<div style=\"text-align:left\">")
+      renderChildren(n.children, sb)
+      sb.add("</div>")
+    of "right":
+      sb.add("<div style=\"text-align:right\">")
+      renderChildren(n.children, sb)
+      sb.add("</div>")
+    of "align":
+      if n.hasValue and isValidAlign(n.value):
+        sb.add("<div style=\"text-align:")
+        sb.add(n.value.toLowerAscii())
+        sb.add("\">")
+        renderChildren(n.children, sb)
+        sb.add("</div>")
+      else:
+        renderUnknown(n, sb)
+    of "spoiler":
+      sb.add("<details><summary>")
+      if n.hasValue:
+        htmlEscape(n.value, sb)
+      else:
+        sb.add("Spoiler")
+      sb.add("</summary>")
+      renderChildren(n.children, sb)
+      sb.add("</details>")
     of "url":
       var href = ""
       var ok = false
@@ -213,6 +252,10 @@ proc renderNode(n: Node, sb: var string) =
     of "list":
       let ordered = n.hasValue and n.value == "1"
       renderList(n, ordered, sb)
+    of "h1", "h2", "h3", "h4", "h5", "h6":
+      sb.add('<'); sb.add(n.name); sb.add('>')
+      renderChildren(n.children, sb)
+      sb.add("</"); sb.add(n.name); sb.add('>')
     else:
       renderUnknown(n, sb)
 
